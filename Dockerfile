@@ -3,7 +3,7 @@ FROM alpine:latest
 
 
 #------------ GO BUILD ------------#
-RUN apk update && apk add go gcc bash musl-dev 
+RUN apk update && apk add go gcc bash musl-dev git
 RUN wget https://golang.org/dl/go1.17.linux-amd64.tar.gz && tar -C /usr/local -xzf go1.17.linux-amd64.tar.gz
 RUN cd /usr/local/go/src && ./make.bash
 ENV PATH=$PATH:/usr/local/go/bin
@@ -13,7 +13,7 @@ RUN go version
 #------------ GO CLIENT ------------#
 WORKDIR /app
 
-
+RUN git clone https://gitlab.enterpriselab.ch/mnielsen/mf_client.git
 
 COPY go.mod ./
 RUN go mod download
