@@ -11,14 +11,7 @@ RUN rm go1.17.linux-amd64.tar.gz
 RUN apk del go
 RUN go version
 #------------ GO CLIENT ------------#
-WORKDIR /app
-
 RUN git clone https://gitlab.enterpriselab.ch/mnielsen/mf_client.git
-
-COPY go.mod ./
+WORKDIR /mf_client
 RUN go mod download
-
-#git clone#
-COPY *.go ./ 				
-
-RUN go build -o /app/mf_client
+RUN go build -o /mf_client
