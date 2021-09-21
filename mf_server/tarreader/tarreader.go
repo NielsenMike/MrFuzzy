@@ -9,8 +9,19 @@ import (
 	"io"
 	"log"
 	"mf_server/data"
+	"os"
 	"strconv"
 )
+
+func Open(filepath string) *tar.Reader{
+	fd, err := os.Open(filepath)
+	if err != nil{
+		panic("Open .tar file failed on path:" +filepath)
+	}
+	tarReader := tar.NewReader(fd)
+	return tarReader
+}
+
 
 // read each file from tar
 func Read(tr *tar.Reader, ls *list.List) error {
@@ -40,9 +51,9 @@ func Read(tr *tar.Reader, ls *list.List) error {
 	}
 }
 
-func readFiles(header *tar.Header, data []byte) Hashing.FileHashingData {
+func readFiles(header *tar.Header, data []byte) Data.FileHashingData {
 	// if it's a file create it
-	fileData := Hashing.FileHashingData{}
+	fileData := Data.FileHashingData{}
 	// check if it is a file
 	if header.Typeflag == tar.TypeReg {
 		// create fuzzy hash with ssdeep
@@ -54,7 +65,7 @@ func readFiles(header *tar.Header, data []byte) Hashing.FileHashingData {
 		sha256hash.Write(data) // write bytes into sha object
 
 		// create file hashing data struct
-		fileData = Hashing.FileHashingData{
+		fileData = Data.FileHashingData{
 			Name: header.Name,
 			Size: strconv.FormatInt(header.Size, 10),
 			SHA256Hash: hex.EncodeToString(sha256hash.Sum(nil)),

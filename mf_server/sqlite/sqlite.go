@@ -38,17 +38,17 @@ func writeTable(database *sql.DB, data *list.List){
 	}
 	//For looping through data and adding values
 	for f := data.Front(); f != nil; f = f.Next() {
-		name := f.Value.(Hashing.FileHashingData).Name
-		size := f.Value.(Hashing.FileHashingData).Size
-		sha256 := f.Value.(Hashing.FileHashingData).SHA256Hash
-		ssdeep := f.Value.(Hashing.FileHashingData).SSDEEPHash
+		name := f.Value.(Data.FileHashingData).Name
+		size := f.Value.(Data.FileHashingData).Size
+		sha256 := f.Value.(Data.FileHashingData).SHA256Hash
+		ssdeep := f.Value.(Data.FileHashingData).SSDEEPHash
 		statement.Exec(name, size, sha256, ssdeep)
 	}
 	fmt.Println("Write Complete")
 }
 
 //Write Hashing Data into SQLLite Database --> READ TODOS
-func WriteDatabase(data *list.List){
+func WriteDatabase(filename string, data *list.List){
 
 	//Creates a db file with table hashed
 	fmt.Println("Creating database")

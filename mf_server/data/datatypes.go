@@ -1,4 +1,4 @@
-package Hashing
+package Data
 
 import (
 	"container/list"
