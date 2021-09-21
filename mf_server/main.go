@@ -12,14 +12,13 @@ import (
 func main() {
 
 	// parse arguments
-	tarDirPtr := flag.String("tardir", "", "a string")
-	dbDirPtr := flag.String("dbdir", "", "a string")
+	var achriveDirPtr = flag.String("archdir", "", "a string")
 	flag.Parse()
 
 	// check if both arguments are set
-	if *tarDirPtr != "" && *dbDirPtr != "" {
+	if *achriveDirPtr != "" {
 		// open tar files
-		for _, filename := range Data.Find(*tarDirPtr, ".tar") {
+		for _, filename := range Data.Find(*achriveDirPtr, ".tar") {
 			tarReaderPtr := tarreader.Open(filename)
 			data := list.New()
 			err := tarreader.Read(tarReaderPtr, data) // read tar file and return list of file hashing data
