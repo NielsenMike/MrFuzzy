@@ -1,4 +1,4 @@
-module mf_server/main
+module mf_server
 
 go 1.16
 
