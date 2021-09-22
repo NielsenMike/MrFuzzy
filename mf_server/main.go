@@ -30,6 +30,7 @@ func main() {
 			sqlite.WriteDatabase(dbFilename, data)
 		}
 	}
+	sqlite.Cleanup(*achriveDirPtr)
 }
 
 
