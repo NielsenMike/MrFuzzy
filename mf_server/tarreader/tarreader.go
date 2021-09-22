@@ -3,9 +3,6 @@ package tarreader
 import (
 	"archive/tar"
 	"container/list"
-	"crypto/sha256"
-	"encoding/hex"
-	"github.com/glaslos/ssdeep"
 	"io"
 	"log"
 	"mf_server/data"
@@ -56,21 +53,9 @@ func readFiles(header *tar.Header, data []byte) Data.FileHashingData {
 	fileData := Data.FileHashingData{}
 	// check if it is a file
 	if header.Typeflag == tar.TypeReg {
-		// create fuzzy hash with ssdeep
-		ssdeepHash, fError := ssdeep.FuzzyBytes(data)
-		if fError != nil {
-			ssdeepHash = fError.Error() // the file is to small for ssdeep output error
-		}
-		sha256hash := sha256.New()
-		sha256hash.Write(data) // write bytes into sha object
-
-		// create file hashing data struct
-		fileData = Data.FileHashingData{
-			Name: header.Name,
-			Size: strconv.FormatInt(header.Size, 10),
-			SHA256Hash: hex.EncodeToString(sha256hash.Sum(nil)),
-			SSDEEPHash: ssdeepHash,
-		}
+		fileData.Name = header.Name
+		fileData.Size = strconv.FormatInt(header.Size, 10)
+		Data.SetHashValues(&fileData, &data)
 	}
 	// return file hashing data element
 	return fileData
