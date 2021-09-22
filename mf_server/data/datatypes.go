@@ -23,7 +23,7 @@ func SetHashValues(fileHashingData *FileHashingData, data *[]byte){
 	// create fuzzy hash with ssdeep
 	ssdeepHash, fError := ssdeep.FuzzyBytes(*data)
 	if fError != nil {
-		ssdeepHash = fError.Error() // the file is to small for ssdeep output error
+		ssdeepHash = "-" // the file is to small for ssdeep output error
 	}
 	sha256hash := sha256.New()
 	sha256hash.Write(*data) // write bytes into sha object

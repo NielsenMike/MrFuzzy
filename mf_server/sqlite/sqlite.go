@@ -20,7 +20,7 @@ func createTable(database *sql.DB){
 
 	//Creates the table i.e. the scheme
 	createHashingTable := "CREATE TABLE hashed (" +
-		"name NOT NULL PRIMARY KEY, " +
+		"name TEXT NOT NULL PRIMARY KEY, " +
 		"size TEXT, " +
 		"init_sha256hash TEXT, " +
 		"init_ssdeephash TEXT, " +
@@ -28,7 +28,6 @@ func createTable(database *sql.DB){
 		"cur_sha256hash TEXT," +
 		"cur_ssdeephash TEXT," +
 		"cur_date TEXT," +
-		"missing TEXT," +
 		"percentChange INT);"
 
 	//Prepare Statement
@@ -50,7 +49,7 @@ func writeTableInit(database *sql.DB, data *list.List){
 
 	//Writing the INIT data into the Table
 	fmt.Println("Writing INIT Data")
-	insertData := "INSERT INTO hashed (name, size, init_sha256Hash, init_ssdeepHash, init_date, cur_sha256hash, cur_ssdeephash, cur_date, missing, percentchange) VALUES (?,?,?,?,?,?,?,?,?,?)"
+	insertData := "INSERT INTO hashed (name, size, init_sha256Hash, init_ssdeepHash, init_date, cur_sha256hash, cur_ssdeephash, cur_date, percentchange) VALUES (?,?,?,?,?,?,?,?,?)"
 	statement, err := database.Prepare(insertData)
 	if err != nil {
 		fmt.Println("Error writing into database: \n" + err.Error())
@@ -66,7 +65,7 @@ func writeTableInit(database *sql.DB, data *list.List){
 		size := f.Value.(Data.FileHashingData).Size
 		sha256 := f.Value.(Data.FileHashingData).SHA256Hash
 		ssdeep := f.Value.(Data.FileHashingData).SSDEEPHash
-		statement.Exec(name, size, sha256, ssdeep, init_date, "null","null","null", "false", 100)
+		statement.Exec(name, size, sha256, ssdeep, init_date, "null","null","null", 100)
 	}
 	fmt.Println("INIT Write Complete")
 }
@@ -82,8 +81,7 @@ func writeTableCur(database *sql.DB, data *list.List){
 
 	//Writing the CUR data into the Table
 	fmt.Println("Writing UPDATE Data")
-	updateStatement := "UPDATE hashed SET cur_sha256hash = $1, cur_ssdeephash = $2, cur_date =  $3, missing = $4, percentChange = $5 WHERE name = $6"
-
+	updateStatement := "UPDATE hashed SET cur_sha256hash = $1, cur_ssdeephash = $2, cur_date =  $3, percentChange = $4 WHERE name = $5"
 
 	//For looping through data and adding values from list - UPDATE LIST
 	for f := data.Front(); f != nil; f = f.Next() {
@@ -95,19 +93,30 @@ func writeTableCur(database *sql.DB, data *list.List){
 		//Call to see if entry exists
 		// YES --> Continue
 		// NO --> Add entry as new
-		//Missing and Percent Flags updated here --> TODO
-		_, err := database.Exec(updateStatement, sha256, ssdeep, cur_date, "false", 100, name1)
+
+		//fuzzy value
+
+		var fuzzyvaluefromdb string
+		var currentscore int
+		err := database.QueryRow("SELECT init_ssdeephash, percentChange FROM hashed WHERE name = ?", name1).Scan(&fuzzyvaluefromdb, &currentscore)
+		if err != nil {
+			fmt.Println("Error fetching fuzzy value from DB. Possible that file does not yet exist. \n" + err.Error())
+		}
+		var newscore = Data.CalculateSSDEEPScore(fuzzyvaluefromdb, ssdeep, currentscore)
+
+		//Update Statement
+		_, err = database.Exec(updateStatement, sha256, ssdeep, cur_date, newscore, name1)
 		if err != nil {
 			//ENTRY DOES NOT EXIST --> Newly added file from Update by threat actor or system
 			if err == sql.ErrNoRows {
 
 				//Inserting New file
-				insertData := "INSERT INTO hashed(name, size, init_sha256Hash, init_ssdeepHash, init_date, cur_sha256hash, cur_ssdeephash, cur_date, missing, percentchange) VALUES (?,?,?,?,?,?,?,?,?,?)"
+				insertData := "INSERT INTO hashed(name, size, init_sha256Hash, init_ssdeepHash, init_date, cur_sha256hash, cur_ssdeephash, cur_date, percentchange) VALUES (?,?,?,?,?,?,?,?,?)"
 				statement, err := database.Prepare(insertData)
 				if err != nil {
 					fmt.Println("Error writing into database: \n" + err.Error())
 				}
-				statement.Exec(name1, size, sha256, ssdeep, cur_date, sha256, ssdeep, cur_date, false, 100)
+				statement.Exec(name1, size, sha256, ssdeep, cur_date, sha256, ssdeep, cur_date, 100)
 
 			}
 			fmt.Println("Error writing into database: \n" + err.Error())
