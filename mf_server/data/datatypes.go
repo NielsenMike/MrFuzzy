@@ -30,6 +30,18 @@ type FileHashingDataSQL struct {
 	PercentChange  int
 }
 
+// page data for device info
+type DeviceInfo struct {
+	DeviceName string
+	Databases []string
+}
+
+// page data for device info
+type DatabaseInfo struct {
+	DatabaseName string
+	DatabaseEntries *[]FileHashingDataSQL
+}
+
 
 // set SHA256 & SSDEEP hash values
 func SetHashValues(fileHashingData *FileHashingData, data *[]byte){

@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func CreateFile(absolutePath string) *os.File{
@@ -41,19 +40,6 @@ func FindFilesByExtension(rootPath, ext string) []string {
 		return nil
 	})
 	return files
-}
-
-func GetPathFromString(absolutePath string) string{
-	var paths  = strings.Split(absolutePath, "/")
-	paths = paths[:len(paths)-1]
-	var finalpath = strings.Join(paths, "/")
-	return finalpath
-}
-
-func GetFilenameFromString(absoulutePath string) string{
-	var pathname  = strings.Split(absoulutePath, "/")
-	var filename = pathname[len(pathname)-1]
-	return filename
 }
 
 func ReplaceExt(filename, repExt string) string {

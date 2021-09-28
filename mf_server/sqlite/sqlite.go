@@ -1,7 +1,6 @@
 package sqlite
 
 import (
-	"container/list"
 	"database/sql"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
@@ -27,7 +26,7 @@ func OpenDatabase(absolutePath string) *sql.DB{
 
 //createTable This function creates the sql table for the given database file
 //Defines the Database Scheme/*
-func createTableHashedIfNotExists(database *sql.DB){
+func CreateTableHashedIfNotExists(database *sql.DB){
 
 	//Creates the table i.e. the scheme
 	createHashingTable := "CREATE TABLE IF NOT EXISTS hashed (" +
@@ -47,7 +46,7 @@ func createTableHashedIfNotExists(database *sql.DB){
 	statement.Exec()
 }
 
-func selectHashDataByName(database *sql.DB, name string) Data.FileHashingDataSQL{
+func SelectHashDataByName(database *sql.DB, name string) Data.FileHashingDataSQL{
 	var hashedSQLData = Data.FileHashingDataSQL{}
 	err := database.QueryRow("SELECT * FROM hashed WHERE name = ?", name).Scan(&hashedSQLData.Name,
 		&hashedSQLData.Size, &hashedSQLData.InitSha256hash, &hashedSQLData.InitSsdeephash, &hashedSQLData.InitDate,
@@ -58,8 +57,25 @@ func selectHashDataByName(database *sql.DB, name string) Data.FileHashingDataSQL
 	return hashedSQLData
 }
 
+func SelectHashData(database *sql.DB, hashingData *[]Data.FileHashingDataSQL){
+	hashedSQLRows, err := database.Query("SELECT * FROM hashed LIMIT 10, 20")
+	if err != nil && err != sql.ErrNoRows {
+		fmt.Println("Error in select hash data \n" + err.Error())
+	}
+	for hashedSQLRows.Next() {
+		var selRow Data.FileHashingDataSQL
+		if err := hashedSQLRows.Scan(&selRow.Name,
+			&selRow.Size, &selRow.InitSha256hash, &selRow.InitSsdeephash, &selRow.InitDate,
+			&selRow.CurSha256hash, &selRow.CurSsdeephash, &selRow.CurDate, &selRow.PercentChange);
+		err != nil {
+			return
+		}
+		*hashingData = append(*hashingData, selRow)
+	}
+}
 
-func insertHashData(database *sql.DB, data Data.FileHashingData) {
+
+func InsertHashData(database *sql.DB, data Data.FileHashingData) {
 	insertData := "INSERT INTO hashed (name, size, init_sha256Hash, init_ssdeepHash, init_date, cur_sha256hash, " +
 		"cur_ssdeephash, cur_date, percentchange) VALUES (?,?,?,?,?,?,?,?,?)"
 	statement, err := database.Prepare(insertData)
@@ -76,12 +92,12 @@ func insertHashData(database *sql.DB, data Data.FileHashingData) {
 
 //writeTableCur This function writes to the table i.e. the database for the UPDATE SCENARIO
 //Filling the information with a prepared statement and a for loop/*
-func updateHashData(database *sql.DB, data Data.FileHashingData){
+func UpdateHashData(database *sql.DB, data Data.FileHashingData){
 	//Date variable for init_date set
 	currentTime := time.Now()
 	var curDate = currentTime.Format("02-01-2006 15:04:05")
 
-	var sqlHashData = selectHashDataByName(database, data.Name)
+	var sqlHashData = SelectHashDataByName(database, data.Name)
 	updateStatement := "UPDATE hashed SET cur_sha256hash = $1, cur_ssdeephash = $2, cur_date =  $3, percentChange = $4 WHERE name = $5"
 	var percentageChanged = Data.CalculateSSDEEPScore(sqlHashData.InitSsdeephash, data.SSDEEPHash, sqlHashData.PercentChange)
 	_, err := database.Exec(updateStatement, data.SHA256Hash, data.SSDEEPHash, curDate, percentageChanged, data.Name)
@@ -109,27 +125,6 @@ func Cleanup(finalpath string){
 		}
 	}
 
-}
-
-// WriteDatabase This function serves to be the "main" function of this package
-//The logical process is decided whether a db file exists and the UPDATE SCENARIO is used or
-//if the INIT SCENARIO is used, when no db file exists.
-//DB file is created
-func WriteDataIntoDatabase(database *sql.DB, data *list.List){
-	createTableHashedIfNotExists(database)
-	//For looping through data and adding values from list
-	for entry := data.Front(); entry != nil; entry = entry.Next() {
-		name := entry.Value.(Data.FileHashingData).Name
-		var hashSQLData = selectHashDataByName(database, name)
-		if hashSQLData.Name == ""  {
-			insertHashData(database, entry.Value.(Data.FileHashingData))
-			continue
-		}
-		updateHashData(database, entry.Value.(Data.FileHashingData))
-	}
-	//close database
-	database.Close()
-	fmt.Println("Finished All Chores Successfully")
 }
 
 
