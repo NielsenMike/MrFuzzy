@@ -9,17 +9,28 @@ import (
 	"mf_server/data"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
 
+func OpenDatabase(absolutePath string) *sql.DB{
+	if !Data.FileExists(absolutePath) {
+		Data.CreateFile(absolutePath)
+	}
+	database, err := sql.Open("sqlite3", absolutePath)
+	if err != nil {
+		fmt.Println("Error opening db file: \n" + err.Error())
+		return nil
+	}
+	return database
+}
+
 //createTable This function creates the sql table for the given database file
 //Defines the Database Scheme/*
-func createTable(database *sql.DB){
+func createTableHashedIfNotExists(database *sql.DB){
 
 	//Creates the table i.e. the scheme
-	createHashingTable := "CREATE TABLE hashed (" +
+	createHashingTable := "CREATE TABLE IF NOT EXISTS hashed (" +
 		"name TEXT NOT NULL PRIMARY KEY, " +
 		"size TEXT, " +
 		"init_sha256hash TEXT, " +
@@ -29,100 +40,54 @@ func createTable(database *sql.DB){
 		"cur_ssdeephash TEXT," +
 		"cur_date TEXT," +
 		"percentChange INT);"
-
-	//Prepare Statement
-	fmt.Println("Making Table")
 	statement, err := database.Prepare(createHashingTable)
 	if err != nil {
-		fmt.Println("Error making table: \n "+err.Error())
+		fmt.Println("Error creating table: \n "+err.Error())
 	}
-
-	//Exec
 	statement.Exec()
-	fmt.Println("Made Table Successfully")
+}
+
+func selectHashDataByName(database *sql.DB, name string) Data.FileHashingDataSQL{
+	var hashedSQLData = Data.FileHashingDataSQL{}
+	err := database.QueryRow("SELECT * FROM hashed WHERE name = ?", name).Scan(&hashedSQLData.Name,
+		&hashedSQLData.Size, &hashedSQLData.InitSha256hash, &hashedSQLData.InitSsdeephash, &hashedSQLData.InitDate,
+		&hashedSQLData.CurSha256hash, &hashedSQLData.CurSsdeephash, &hashedSQLData.CurDate, &hashedSQLData.PercentChange)
+	if err != nil && err != sql.ErrNoRows {
+		fmt.Println("Error in select hash data \n" + err.Error())
+	}
+	return hashedSQLData
 }
 
 
-//writeTableInit This function writes to the table i.e. the database for the INIT SCENARIO
-//Filling the information with a prepared statement and a for loop /*
-func writeTableInit(database *sql.DB, data *list.List){
-
-	//Writing the INIT data into the Table
-	fmt.Println("Writing INIT Data")
-	insertData := "INSERT INTO hashed (name, size, init_sha256Hash, init_ssdeepHash, init_date, cur_sha256hash, cur_ssdeephash, cur_date, percentchange) VALUES (?,?,?,?,?,?,?,?,?)"
+func insertHashData(database *sql.DB, data Data.FileHashingData) {
+	insertData := "INSERT INTO hashed (name, size, init_sha256Hash, init_ssdeepHash, init_date, cur_sha256hash, " +
+		"cur_ssdeephash, cur_date, percentchange) VALUES (?,?,?,?,?,?,?,?,?)"
 	statement, err := database.Prepare(insertData)
 	if err != nil {
-		fmt.Println("Error writing into database: \n" + err.Error())
+		fmt.Println("Error insert into database: \n" + err.Error())
+		return
 	}
-
 	//Date variable for init_date set
 	currentTime := time.Now()
 	var init_date = currentTime.Format("02-01-2006 15:04:05")
-
-	//For looping through data and adding values from list
-	for f := data.Front(); f != nil; f = f.Next() {
-		name := f.Value.(Data.FileHashingData).Name
-		size := f.Value.(Data.FileHashingData).Size
-		sha256 := f.Value.(Data.FileHashingData).SHA256Hash
-		ssdeep := f.Value.(Data.FileHashingData).SSDEEPHash
-		statement.Exec(name, size, sha256, ssdeep, init_date, "null","null","null", 100)
-	}
-	fmt.Println("INIT Write Complete")
+	statement.Exec(data.Name, data.Size, data.SHA256Hash, data.SSDEEPHash, init_date, "null","null","null", 100)
 }
 
 
 //writeTableCur This function writes to the table i.e. the database for the UPDATE SCENARIO
 //Filling the information with a prepared statement and a for loop/*
-func writeTableCur(database *sql.DB, data *list.List){
-
+func updateHashData(database *sql.DB, data Data.FileHashingData){
 	//Date variable for init_date set
 	currentTime := time.Now()
-	var cur_date = currentTime.Format("02-01-2006 15:04:05")
+	var curDate = currentTime.Format("02-01-2006 15:04:05")
 
-	//Writing the CUR data into the Table
-	fmt.Println("Writing UPDATE Data")
+	var sqlHashData = selectHashDataByName(database, data.Name)
 	updateStatement := "UPDATE hashed SET cur_sha256hash = $1, cur_ssdeephash = $2, cur_date =  $3, percentChange = $4 WHERE name = $5"
-
-	//For looping through data and adding values from list - UPDATE LIST
-	for f := data.Front(); f != nil; f = f.Next() {
-		name1 := f.Value.(Data.FileHashingData).Name
-		size := f.Value.(Data.FileHashingData).Size
-		sha256 := f.Value.(Data.FileHashingData).SHA256Hash
-		ssdeep := f.Value.(Data.FileHashingData).SSDEEPHash
-
-		//Call to see if entry exists
-		// YES --> Continue
-		// NO --> Add entry as new
-
-		//fuzzy value
-
-		var fuzzyvaluefromdb string
-		var currentscore int
-		err := database.QueryRow("SELECT init_ssdeephash, percentChange FROM hashed WHERE name = ?", name1).Scan(&fuzzyvaluefromdb, &currentscore)
-		if err != nil {
-			fmt.Println("Error fetching fuzzy value from DB. Possible that file does not yet exist. \n" + err.Error())
-		}
-		var newscore = Data.CalculateSSDEEPScore(fuzzyvaluefromdb, ssdeep, currentscore)
-
-		//Update Statement
-		_, err = database.Exec(updateStatement, sha256, ssdeep, cur_date, newscore, name1)
-		if err != nil {
-			//ENTRY DOES NOT EXIST --> Newly added file from Update by threat actor or system
-			if err == sql.ErrNoRows {
-
-				//Inserting New file
-				insertData := "INSERT INTO hashed(name, size, init_sha256Hash, init_ssdeepHash, init_date, cur_sha256hash, cur_ssdeephash, cur_date, percentchange) VALUES (?,?,?,?,?,?,?,?,?)"
-				statement, err := database.Prepare(insertData)
-				if err != nil {
-					fmt.Println("Error writing into database: \n" + err.Error())
-				}
-				statement.Exec(name1, size, sha256, ssdeep, cur_date, sha256, ssdeep, cur_date, 100)
-
-			}
-			fmt.Println("Error writing into database: \n" + err.Error())
-		}
+	var percentageChanged = Data.CalculateSSDEEPScore(sqlHashData.InitSsdeephash, data.SSDEEPHash, sqlHashData.PercentChange)
+	_, err := database.Exec(updateStatement, data.SHA256Hash, data.SSDEEPHash, curDate, percentageChanged, data.Name)
+	if err != nil {
+		fmt.Println("Error writing into database: \n" + err.Error())
 	}
-	fmt.Println("CUR Write Complete")
 }
 
 // Cleanup Serves as the cleanup, removes the remaining TAR files from the directory
@@ -150,70 +115,20 @@ func Cleanup(finalpath string){
 //The logical process is decided whether a db file exists and the UPDATE SCENARIO is used or
 //if the INIT SCENARIO is used, when no db file exists.
 //DB file is created
-//Cleanup is also performed/*
-func WriteDatabase(filename string,data *list.List){
-
-	//init or update boolean
-	var doinit = true
-
-	//Get Path from filename
-	var pathname  = strings.Split(filename, "/")
-	var dbfile string = pathname[len(pathname)-1]
-	pathname = pathname[:len(pathname)-1]
-	var finalpath = strings.Join(pathname, "/")
-
-	//Start logical decision: init or update
-	//List files within given filepath
-	files, err := ioutil.ReadDir(finalpath)
-	if err != nil {
-		fmt.Println("Error reading given Directory: \n" + err.Error())
+func WriteDataIntoDatabase(database *sql.DB, data *list.List){
+	createTableHashedIfNotExists(database)
+	//For looping through data and adding values from list
+	for entry := data.Front(); entry != nil; entry = entry.Next() {
+		name := entry.Value.(Data.FileHashingData).Name
+		var hashSQLData = selectHashDataByName(database, name)
+		if hashSQLData.Name == ""  {
+			insertHashData(database, entry.Value.(Data.FileHashingData))
+			continue
+		}
+		updateHashData(database, entry.Value.(Data.FileHashingData))
 	}
-	for _, file := range files {
-		var founddb, _ = filepath.Match(dbfile, file.Name())
-		if founddb {
-			doinit = false
-			break
-		}
-	}
-	//Decision: init or update
-	if doinit {
-		//Did not find db --> init process
-		//Create db file
-		file, err := os.Create(filename)
-		if err != nil {
-			fmt.Println("Error making db file: \n"+err.Error())
-		}
-		_ = file.Close()
-
-		database, err := sql.Open("sqlite3", filename)
-		if err != nil {
-			fmt.Println("Error opening db file: \n" + err.Error())
-		}
-		defer database.Close()
-
-		//CreateTable Database
-		createTable(database)
-
-		//WriteTable Database
-		writeTableInit(database, data)
-
-		//close database
-		database.Close()
-
-	} else {
-		database, err := sql.Open("sqlite3", filename)
-		if err != nil {
-			fmt.Println("Error opening db file: \n" + err.Error())
-		}
-		defer database.Close()
-
-		//updateTable
-		writeTableCur(database, data)
-
-		//close database
-		database.Close()
-	}
-
+	//close database
+	database.Close()
 	fmt.Println("Finished All Chores Successfully")
 }
 

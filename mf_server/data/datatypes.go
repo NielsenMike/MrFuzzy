@@ -17,6 +17,19 @@ type FileHashingData struct {
 	SSDEEPHash string
 }
 
+// file hashing data
+type FileHashingDataSQL struct {
+	Name           string
+	Size           string
+	InitSha256hash string
+	InitSsdeephash string
+	InitDate       string
+	CurSha256hash  string
+	CurSsdeephash  string
+	CurDate        string
+	PercentChange  int
+}
+
 
 // set SHA256 & SSDEEP hash values
 func SetHashValues(fileHashingData *FileHashingData, data *[]byte){
