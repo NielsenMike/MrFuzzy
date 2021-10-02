@@ -48,13 +48,22 @@ func CreateTableHashedIfNotExists(database *sql.DB){
 
 func SelectHashDataByName(database *sql.DB, name string) Data.FileHashingDataSQL{
 	var hashedSQLData = Data.FileHashingDataSQL{}
-	err := database.QueryRow("SELECT * FROM hashed WHERE name = ?", name).Scan(&hashedSQLData.Name,
+	row := database.QueryRow("SELECT * FROM hashed WHERE name = ?", name).Scan(&hashedSQLData.Name,
 		&hashedSQLData.Size, &hashedSQLData.InitSha256hash, &hashedSQLData.InitSsdeephash, &hashedSQLData.InitDate,
 		&hashedSQLData.CurSha256hash, &hashedSQLData.CurSsdeephash, &hashedSQLData.CurDate, &hashedSQLData.PercentChange)
-	if err != nil && err != sql.ErrNoRows {
-		fmt.Println("Error in select hash data \n" + err.Error())
+	if row.Error() != sql.ErrNoRows.Error() {
+		fmt.Println("Error in select hash data \n" + row.Error())
 	}
 	return hashedSQLData
+}
+
+func SelectCountFromHashData(database *sql.DB) int{
+	count := 0
+	row := database.QueryRow("SELECT COUNT(name) FROM hashed").Scan(&count)
+	if row != nil && row.Error() == sql.ErrNoRows.Error() {
+		fmt.Println("Error in select count from hash data \n" + row.Error())
+	}
+	return count
 }
 
 func SelectHashData(database *sql.DB, hashingData *[]Data.FileHashingDataSQL){

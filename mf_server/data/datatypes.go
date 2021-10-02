@@ -39,6 +39,7 @@ type DeviceInfo struct {
 // page data for device info
 type DatabaseInfo struct {
 	DatabaseName string
+	DatabaseNumberOfEntries int
 	DatabaseEntries *[]FileHashingDataSQL
 }
 

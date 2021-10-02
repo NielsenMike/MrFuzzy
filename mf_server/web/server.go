@@ -27,7 +27,9 @@ func DatabaseHandler(w http.ResponseWriter, r *http.Request){
 	dbAbsolutePath := r.URL.Query().Get("db")
 	var dbPtr = sqlite.OpenDatabase(dbAbsolutePath)
 	if dbPtr != nil{
-		data := Data.DatabaseInfo{DatabaseName: dbAbsolutePath, DatabaseEntries: new([]Data.FileHashingDataSQL)}
+		data := Data.DatabaseInfo{DatabaseName: dbAbsolutePath,
+			DatabaseEntries: new([]Data.FileHashingDataSQL),
+			DatabaseNumberOfEntries: sqlite.SelectCountFromHashData(dbPtr)}
 		sqlite.SelectHashData(dbPtr, data.DatabaseEntries)
 		tmpl.Execute(w, data)
 		data.DatabaseEntries = nil
