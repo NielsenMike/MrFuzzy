@@ -13,9 +13,6 @@ import (
 
 
 func OpenDatabase(absolutePath string) *sql.DB{
-	if !Data.FileExists(absolutePath) {
-		Data.CreateFile(absolutePath)
-	}
 	database, err := sql.Open("sqlite3", absolutePath)
 	if err != nil {
 		fmt.Println("Error opening db file: \n" + err.Error())
@@ -57,29 +54,41 @@ func SelectHashDataByName(database *sql.DB, name string) Data.FileHashingDataSQL
 	return hashedSQLData
 }
 
-func SelectCountFromHashData(database *sql.DB) int{
-	count := 0
-	row := database.QueryRow("SELECT COUNT(name) FROM hashed").Scan(&count)
-	if row != nil && row.Error() == sql.ErrNoRows.Error() {
-		fmt.Println("Error in select count from hash data \n" + row.Error())
+func SelectHashDataCountData(database *sql.DB, searchAttributes Data.FileHashingData) int{
+	var count = 0
+	countQuery := "SELECT COUNT(*) FROM hashed WHERE name like ?"
+	countStatement, err := database.Prepare(countQuery)
+	if err != nil{
+		fmt.Println("Error select statements: \n" + err.Error())
+		return count
 	}
+	sqlRow := countStatement.QueryRow("%" + searchAttributes.Name + "%")
+	sqlRow.Scan(&count)
 	return count
 }
 
-func SelectHashData(database *sql.DB, hashingData *[]Data.FileHashingDataSQL){
-	hashedSQLRows, err := database.Query("SELECT * FROM hashed LIMIT 10, 20")
+func SelectHashDataBySearch(database *sql.DB, searchAttributes Data.FileHashingData, fromIndex, maxRows int,
+	outHashingData *[]Data.FileHashingDataSQL) {
+	selectQuery := "SELECT * FROM hashed WHERE name like ? LIMIT ?,?"
+	selectStatement, err := database.Prepare(selectQuery)
+	if err != nil{
+		fmt.Println("Error select statements: \n" + err.Error())
+		return
+	}
+	sqlRows, err := selectStatement.Query("%" + searchAttributes.Name + "%", fromIndex, maxRows)
 	if err != nil && err != sql.ErrNoRows {
 		fmt.Println("Error in select hash data \n" + err.Error())
-	}
-	for hashedSQLRows.Next() {
-		var selRow Data.FileHashingDataSQL
-		if err := hashedSQLRows.Scan(&selRow.Name,
-			&selRow.Size, &selRow.InitSha256hash, &selRow.InitSsdeephash, &selRow.InitDate,
-			&selRow.CurSha256hash, &selRow.CurSsdeephash, &selRow.CurDate, &selRow.PercentChange);
-		err != nil {
-			return
+	}else{
+		for sqlRows.Next() {
+			var selRow Data.FileHashingDataSQL
+			if err := sqlRows.Scan(&selRow.Name,
+				&selRow.Size, &selRow.InitSha256hash, &selRow.InitSsdeephash, &selRow.InitDate,
+				&selRow.CurSha256hash, &selRow.CurSsdeephash, &selRow.CurDate, &selRow.PercentChange);
+				err != nil {
+				return
+			}
+			*outHashingData = append(*outHashingData, selRow)
 		}
-		*hashingData = append(*hashingData, selRow)
 	}
 }
 

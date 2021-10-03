@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/glaslos/ssdeep"
+	"strings"
 )
 
 
@@ -36,13 +37,27 @@ type DeviceInfo struct {
 	Databases []string
 }
 
-// page data for device info
+// page data for database entries
 type DatabaseInfo struct {
 	DatabaseName string
-	DatabaseNumberOfEntries int
-	DatabaseEntries *[]FileHashingDataSQL
+	Entries *[]FileHashingDataSQL
+	Count int
+	PreviousIndex int
+	FromIndex int
+	NextIndex int
 }
 
+func GetPreviousNextIndex(fromIndex, size, count int) (int,int){
+	var nextIndex = fromIndex + size
+	var previousIndex = fromIndex - size
+	if nextIndex >= count{
+		nextIndex = count
+	}
+	if 0 >= previousIndex {
+		previousIndex = 0
+	}
+	return previousIndex, nextIndex
+}
 
 // set SHA256 & SSDEEP hash values
 func SetHashValues(fileHashingData *FileHashingData, data *[]byte){
@@ -64,6 +79,19 @@ func CalculateSSDEEPScore(hash1 string, hash2 string, currentScore int) int {
 	return score
 }
 
+
+func ParseSearchString(searchString string) FileHashingData{
+	fileHashingData := FileHashingData{}
+	query := strings.Split(searchString, ";")
+	for _, attribute := range query {
+		pair := strings.Split(attribute, "=")
+		switch pair[0] {
+		case "name":
+			fileHashingData.Name = pair[1]
+		}
+	}
+	return fileHashingData
+}
 
 
 // print data
