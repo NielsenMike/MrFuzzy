@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"container/list"
 	"io"
-	"log"
 	"mf_server/data"
 	"os"
 	"strconv"
@@ -21,7 +20,7 @@ func Open(filepath string) *tar.Reader{
 
 
 // read each file from tar
-func Read(tr *tar.Reader, ls *list.List) error {
+func Read(tr *tar.Reader, dataOut *list.List) error {
 	for {
 		header, err := tr.Next()
 		switch {
@@ -37,15 +36,16 @@ func Read(tr *tar.Reader, ls *list.List) error {
 		}
 		data, err := io.ReadAll(tr)
 		if err != nil {
-			log.Fatal(err) // something went wrong with the file
+			return err
 		}
 		fileData := readFiles(header, data)
 
 		// if it is not a file don't add element into list
 		if len(fileData.Name) > 0{
-			ls.PushBack(fileData)
+			dataOut.PushBack(fileData)
 		}
 	}
+	return nil
 }
 
 func readFiles(header *tar.Header, data []byte) Data.FileHashingData {

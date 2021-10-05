@@ -2,13 +2,17 @@ package web
 
 import (
 	"container/list"
+	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"mf_server/data"
 	"mf_server/sqlite"
 	"mf_server/tarreader"
 	"net/http"
+	"os"
 	"strconv"
+	"time"
 )
 
 var (
@@ -58,32 +62,74 @@ func DatabaseHandler(w http.ResponseWriter, r *http.Request){
 
 func WriteDataIntoDBHandler(w http.ResponseWriter, r *http.Request) {
 	// open tar files
-	for _, filename := range Data.FindFilesByExtension(*ArchiveDirPtr, ".tar") {
-		tarReaderPtr := tarreader.Open(filename)
+	for _, tarAbsolutePath := range Data.FindFilesByExtension(*ArchiveDirPtr, ".tar") {
+		fmt.Printf("Reading Tar-file: %s \n", tarAbsolutePath)
 		data := list.New()
-		err := tarreader.Read(tarReaderPtr, data) // read tar file and return list of file hashing data
-		if err != nil {
-			fmt.Println("Reading .tar file failed - ERROR: " + err.Error())
-		}
-		dbAbsolutePath := Data.ReplaceExt(filename, "db")
-		if !Data.FileExists(dbAbsolutePath) { Data.CreateFile(dbAbsolutePath) }
-		var dbPtr = sqlite.OpenDatabase(dbAbsolutePath)
-		if dbPtr != nil{
-			sqlite.CreateTableHashedIfNotExists(dbPtr)
-			for entry := data.Front(); entry != nil; entry = entry.Next() {
-				name := entry.Value.(Data.FileHashingData).Name
-				var hashSQLData = sqlite.SelectHashDataByName(dbPtr, name)
-				if hashSQLData.Name == ""  {
-					sqlite.InsertHashData(dbPtr, entry.Value.(Data.FileHashingData))
-					continue
-				}
-				sqlite.UpdateHashData(dbPtr, entry.Value.(Data.FileHashingData))
+		err := readDataFromTar(tarAbsolutePath, data)
+		if err == nil{
+			dbAbsolutePath := Data.ReplaceExt(tarAbsolutePath, "db")
+			if !Data.FileExists(dbAbsolutePath) {
+				Data.CreateFile(dbAbsolutePath)
 			}
-			//close database
-			dbPtr.Close()
-			fmt.Println("Finished All Chores Successfully")
-		}
+			err = fillDatabaseChanges(dbAbsolutePath, data)
+			if err == nil{
+				fmt.Printf("Filled data to database: %s \n", dbAbsolutePath)
+				var currentTime = time.Now()
+				err = createBackupFromTar(tarAbsolutePath, currentTime)
+				if err == nil{
+					fmt.Printf("Created backup file: %s \n", tarAbsolutePath)
+				}else{ fmt.Println("Failed to create backup " + err.Error()) }
+			} else { fmt.Println("Failed to fill data to database " + err.Error()) }
+		} else{ fmt.Println("Failed read data from tar " + err.Error()) }
 	}
+}
+
+func createBackupFromTar(absolutePath string, currentDate time.Time) error{
+	// copy tar create backup
+	backupAbsolutePath := Data.ReplaceExt(absolutePath, currentDate.Format("2006-01-02T15:04:05-0700")+".tar.bak")
+	source, err := os.Open(absolutePath)
+	if err != nil {
+		return errors.New("Failed to open file.")
+	}
+	destination, err := os.Create(backupAbsolutePath)
+	if err != nil {
+		return errors.New("Failed to create file.")
+	}
+	_, err = io.Copy(destination, source)
+	if err != nil{
+		return errors.New("Failed to copy file.")
+	}
+	destination.Close()
+	source.Close()
+	return nil
+}
+
+func readDataFromTar(absolutePath string, dataOut *list.List) error{
+	tarReaderPtr := tarreader.Open(absolutePath)
+	err := tarreader.Read(tarReaderPtr, dataOut) // read tar file and return list of file hashing data
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func fillDatabaseChanges(absolutePath string, inData* list.List) error{
+	var dbPtr = sqlite.OpenDatabase(absolutePath)
+	if dbPtr != nil {
+		sqlite.CreateTableHashedIfNotExists(dbPtr)
+		for entry := inData.Front(); entry != nil; entry = entry.Next() {
+			name := entry.Value.(Data.FileHashingData).Name
+			var hashSQLData = sqlite.SelectHashDataByName(dbPtr, name)
+			if hashSQLData.Name == "" {
+				sqlite.InsertHashData(dbPtr, entry.Value.(Data.FileHashingData))
+				continue
+			}
+			sqlite.UpdateHashData(dbPtr, entry.Value.(Data.FileHashingData))
+		}
+		dbPtr.Close()
+		return nil
+	}
+	return errors.New("failed to set data into database.")
 }
 
 
