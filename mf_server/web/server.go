@@ -14,13 +14,16 @@ import (
 var (
 	ArchiveDirPtr *string = nil
 	searchDataQuery = Data.FileHashingData{}
-	databaseViewerEntriesNumber = 10
+	databaseViewerEntriesNumber = 1000
 )
 
 func IndexHandler(w http.ResponseWriter, r *http.Request){
 	tmpl := template.Must(template.ParseFiles("./web/html/index.html"))
-	data := Data.DeviceInfo{DeviceName: "RaspberryPi - Wipro"} // TODO: Hardcoded Name
-	data.Databases = Data.FindFilesByExtension(*ArchiveDirPtr, ".db")
+	data := Data.ResourceInfo{
+		Databases: Data.RetrieveFileInformation(*ArchiveDirPtr, ".db"),
+		Archives: Data.RetrieveFileInformation(*ArchiveDirPtr, ".tar"),
+		Backups: Data.RetrieveFileInformation(*ArchiveDirPtr, ".bak"),
+	}
 	tmpl.Execute(w, data)
 }
 

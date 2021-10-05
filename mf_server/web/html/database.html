@@ -59,6 +59,19 @@
                                 </div>
                             </form>
                         </div>
+                        <div class="col d-flex justify-content-center">
+                            <nav aria-label="...">
+                                <ul class="pagination">
+                                    <li class="page-item"><a class="page-link" href="/database?db={{.DatabaseName}}&from={{.PreviousIndex}}">Previous</a></li>
+                                    <li class="page-item active">
+                                        <a class="page-link" href="#">{{.FromIndex}}-{{.NextIndex}} Total: {{.Count}}</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="/database?db={{.DatabaseName}}&from={{.NextIndex}}">Next</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
                         <div class="card-body">
                             <div class="table-responsive table mt-2" id="dataTable-1" role="grid" aria-describedby="dataTable_info">
                                 <table class="styled-table" id="dataTable">

@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 func CreateFile(absolutePath string) *os.File{
@@ -41,6 +42,23 @@ func FindFilesByExtension(rootPath, ext string) []string {
 		return nil
 	})
 	return files
+}
+
+func RetrieveFileInformation(rootPath, ext string) []FileInformation{
+	var fileInfos []FileInformation
+	var files = FindFilesByExtension(rootPath, ext)
+	for _, absolutePath := range files {
+		// get last modified time
+		file, err := os.Stat(absolutePath)
+		if err != nil { break }
+		fileInfo := FileInformation{
+			AbsolutePath: absolutePath,
+			Timestamp:    file.ModTime().Format("02-01-2006 15:04:05"),
+			Size: strconv.Itoa(int(file.Size())),
+		}
+		fileInfos = append(fileInfos, fileInfo)
+	}
+	return fileInfos
 }
 
 func ReplaceExt(filename, repExt string) string {

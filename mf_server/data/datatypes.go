@@ -31,10 +31,18 @@ type FileHashingDataSQL struct {
 	PercentChange  int
 }
 
-// page data for device info
-type DeviceInfo struct {
-	DeviceName string
-	Databases []string
+type FileInformation struct {
+	AbsolutePath string
+	Timestamp string
+	Size string
+}
+
+
+// page data for Resources
+type ResourceInfo struct {
+	Databases []FileInformation
+	Archives []FileInformation
+	Backups []FileInformation
 }
 
 // page data for database entries
@@ -50,7 +58,7 @@ type DatabaseInfo struct {
 func GetPreviousNextIndex(fromIndex, size, count int) (int,int){
 	var nextIndex = fromIndex + size
 	var previousIndex = fromIndex - size
-	if nextIndex >= count{
+	if nextIndex > count{
 		nextIndex = count
 	}
 	if 0 >= previousIndex {

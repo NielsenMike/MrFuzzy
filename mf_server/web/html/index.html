@@ -42,29 +42,62 @@
                 </div>
             </nav>
             <div class="container-fluid">
-                <h3 class="text-dark mb-4">Building Automation Devices</h3>
+                <h3 class="text-dark mb-4">Resource Viewer</h3>
                 <div class="card shadow">
                     <div class="card-header py-3">
-                        <p class="text-primary m-0 font-weight-bold">{{.DeviceName}}</p>
+                        <p class="text-primary m-0 font-weight-bold">Resources on Server</p>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive table mt-2" id="dataTable-1" role="grid" aria-describedby="dataTable_info">
                             <table class="table my-0" id="dataTable">
                                 <thead>
                                 <tr>
+                                    <th>Backups</th>
+                                    <th>Date Modified</th>
+                                    <th>Size</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {{range .Backups}}
+                                <tr>
+                                    <td>{{.AbsolutePath}}</td>
+                                    <td>{{.Timestamp}}</td>
+                                    <td>{{.Size}}</td>
+                                </tr>
+                                {{end}}
+                                </tbody>
+                                <thead>
+                                <tr>
+                                    <th>Archives</th>
+                                    <th>Date Modified</th>
+                                    <th>Size</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {{range .Archives}}
+                                <tr>
+                                    <td>{{.AbsolutePath}}</td>
+                                    <td>{{.Timestamp}}</td>
+                                    <td>{{.Size}}</td>
+                                </tr>
+                                {{end}}
+                                </tbody>
+                                <thead>
+                                <tr>
                                     <th>Databases</th>
+                                    <th>Date Modified</th>
+                                    <th>Size</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 {{range .Databases}}
                                 <tr>
-                                    <td><a href="./database?db={{.}}">{{.}}</a></td>
+                                    <td><a href="./database?db={{.AbsolutePath}}">{{.AbsolutePath}}</a></td>
+                                    <td>{{.Timestamp}}</td>
+                                    <td>{{.Size}}</td>
                                 </tr>
                                 {{end}}
                                 </tbody>
-                                <tfoot>
-                                <tr></tr>
-                                </tfoot>
                             </table>
                         </div>
                     </div>
