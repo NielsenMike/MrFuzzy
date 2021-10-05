@@ -66,11 +66,7 @@ func WriteDataIntoDBHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Reading .tar file failed - ERROR: " + err.Error())
 		}
 		dbAbsolutePath := Data.ReplaceExt(filename, "db")
-		if !Data.FileExists(dbAbsolutePath) {
-			if Data.CreateFile(dbAbsolutePath) != nil {
-				break
-			}
-		}
+		if !Data.FileExists(dbAbsolutePath) { Data.CreateFile(dbAbsolutePath) }
 		var dbPtr = sqlite.OpenDatabase(dbAbsolutePath)
 		if dbPtr != nil{
 			sqlite.CreateTableHashedIfNotExists(dbPtr)

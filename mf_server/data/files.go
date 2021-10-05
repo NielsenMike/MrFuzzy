@@ -9,14 +9,12 @@ import (
 	"strconv"
 )
 
-func CreateFile(absolutePath string) *os.File{
+func CreateFile(absolutePath string) {
 	file, err := os.Create(absolutePath)
 	if err != nil {
 		fmt.Println("Error creating file: \n"+err.Error())
-		return nil
 	}
 	_ = file.Close()
-	return file
 }
 
 // Check if file exists
