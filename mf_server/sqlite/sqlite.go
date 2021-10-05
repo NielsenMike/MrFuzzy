@@ -45,11 +45,11 @@ func CreateTableHashedIfNotExists(database *sql.DB){
 
 func SelectHashDataByName(database *sql.DB, name string) Data.FileHashingDataSQL{
 	var hashedSQLData = Data.FileHashingDataSQL{}
-	row := database.QueryRow("SELECT * FROM hashed WHERE name = ?", name).Scan(&hashedSQLData.Name,
+	err := database.QueryRow("SELECT * FROM hashed WHERE name = ?", name).Scan(&hashedSQLData.Name,
 		&hashedSQLData.Size, &hashedSQLData.InitSha256hash, &hashedSQLData.InitSsdeephash, &hashedSQLData.InitDate,
 		&hashedSQLData.CurSha256hash, &hashedSQLData.CurSsdeephash, &hashedSQLData.CurDate, &hashedSQLData.PercentChange)
-	if row.Error() != sql.ErrNoRows.Error() {
-		fmt.Println("Error in select hash data \n" + row.Error())
+	if err != nil && err.Error() != sql.ErrNoRows.Error() {
+		fmt.Println("Error in select hash data \n" + err.Error())
 	}
 	return hashedSQLData
 }

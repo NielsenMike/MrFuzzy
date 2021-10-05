@@ -30,17 +30,6 @@
     </nav>
     <div class="d-flex flex-column" id="content-wrapper">
         <div id="content">
-            <nav class="navbar navbar-light navbar-expand-md">
-                <div class="container-fluid"><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
-                    <div class="collapse navbar-collapse" id="navcol-1">
-                        <ul class="nav navbar-nav">
-                            <li class="nav-item"></li>
-                            <li class="nav-item"></li>
-                            <li class="nav-item"></li>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
             <div class="container-fluid">
                 <h3 class="text-dark mb-4">Database Viewer</h3>
                     <div class="card shadow">
@@ -59,7 +48,9 @@
                                 </div>
                             </form>
                         </div>
-                        <div class="col d-flex justify-content-center">
+                    </div>
+                    <div class="card shadow">
+                        <div class="col d-flex justify-content-center" style="padding-top: 20px">
                             <nav aria-label="...">
                                 <ul class="pagination">
                                     <li class="page-item"><a class="page-link" href="/database?db={{.DatabaseName}}&from={{.PreviousIndex}}">Previous</a></li>
@@ -72,57 +63,57 @@
                                 </ul>
                             </nav>
                         </div>
-                        <div class="card-body">
-                            <div class="table-responsive table mt-2" id="dataTable-1" role="grid" aria-describedby="dataTable_info">
-                                <table class="styled-table" id="dataTable">
-                                    <thead>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive table mt-2" id="dataTable-1" role="grid" aria-describedby="dataTable_info">
+                            <table class="styled-table" id="dataTable">
+                                <thead>
+                                <tr>
+                                    <th class="normal-value">name</th>
+                                    <th class="normal-value">size</th>
+                                    <th class="normal-value">initialized SHA256</th>
+                                    <th class="normal-value">initialized SSDEEP</th>
+                                    <th class="normal-value">initialized date</th>
+                                    <th class="normal-value">current SHA256</th>
+                                    <th class="normal-value">current SSDEEP</th>
+                                    <th class="normal-value">current date</th>
+                                    <th class="normal-value">changed %</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                    {{range .Entries}}
                                     <tr>
-                                        <th class="normal-value">name</th>
-                                        <th class="normal-value">size</th>
-                                        <th class="normal-value">initialized SHA256</th>
-                                        <th class="normal-value">initialized SSDEEP</th>
-                                        <th class="normal-value">initialized date</th>
-                                        <th class="normal-value">current SHA256</th>
-                                        <th class="normal-value">current SSDEEP</th>
-                                        <th class="normal-value">current date</th>
-                                        <th class="normal-value">changed %</th>
+                                        <td class="name-value">{{.Name}}</td>
+                                        <td class="normal-value">{{.Size}}</td>
+                                        <td class="hash-value">{{.InitSha256hash}}</td>
+                                        <td class="hash-value">{{.InitSsdeephash}}</td>
+                                        <td class="date-value">{{.InitDate}}</td>
+                                        <td class="hash-value">{{.CurSha256hash}}</td>
+                                        <td class="hash-value">{{.CurSsdeephash}}</td>
+                                        <td class="date-value">{{.CurDate}}</td>
+                                        <td class="normal-value">{{.PercentChange}}</td>
                                     </tr>
-                                    </thead>
-                                    <tbody>
-                                        {{range .Entries}}
-                                        <tr>
-                                            <td class="name-value">{{.Name}}</td>
-                                            <td class="normal-value">{{.Size}}</td>
-                                            <td class="hash-value">{{.InitSha256hash}}</td>
-                                            <td class="hash-value">{{.InitSsdeephash}}</td>
-                                            <td class="date-value">{{.InitDate}}</td>
-                                            <td class="hash-value">{{.CurSha256hash}}</td>
-                                            <td class="hash-value">{{.CurSsdeephash}}</td>
-                                            <td class="date-value">{{.CurDate}}</td>
-                                            <td class="normal-value">{{.PercentChange}}</td>
-                                        </tr>
-                                    {{end}}
-                                    </tbody>
-                                    <tfoot>
-                                        <tr></tr>
-                                    </tfoot>
-                                </table>
-                            </div>
+                                {{end}}
+                                </tbody>
+                                <tfoot>
+                                    <tr></tr>
+                                </tfoot>
+                            </table>
                         </div>
-                        <div class="card-footer">
-                            <div class="col d-flex justify-content-center">
-                                <nav aria-label="...">
-                                    <ul class="pagination">
-                                        <li class="page-item"><a class="page-link" href="/database?db={{.DatabaseName}}&from={{.PreviousIndex}}">Previous</a></li>
-                                        <li class="page-item active">
-                                            <a class="page-link" href="#">{{.FromIndex}}-{{.NextIndex}} Total: {{.Count}}</a>
-                                        </li>
-                                        <li class="page-item">
-                                            <a class="page-link" href="/database?db={{.DatabaseName}}&from={{.NextIndex}}">Next</a>
-                                        </li>
-                                    </ul>
-                                </nav>
-                            </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="col d-flex justify-content-center">
+                            <nav aria-label="...">
+                                <ul class="pagination">
+                                    <li class="page-item"><a class="page-link" href="/database?db={{.DatabaseName}}&from={{.PreviousIndex}}">Previous</a></li>
+                                    <li class="page-item active">
+                                        <a class="page-link" href="#">{{.FromIndex}}-{{.NextIndex}} Total: {{.Count}}</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="/database?db={{.DatabaseName}}&from={{.NextIndex}}">Next</a>
+                                    </li>
+                                </ul>
+                            </nav>
                         </div>
                     </div>
                 </div>

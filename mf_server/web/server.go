@@ -67,24 +67,25 @@ func WriteDataIntoDBHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		dbAbsolutePath := Data.ReplaceExt(filename, "db")
 		if !Data.FileExists(dbAbsolutePath) {
-			if Data.CreateFile(dbAbsolutePath) != nil{
-				var dbPtr = sqlite.OpenDatabase(dbAbsolutePath)
-				if dbPtr != nil{
-					sqlite.CreateTableHashedIfNotExists(dbPtr)
-					for entry := data.Front(); entry != nil; entry = entry.Next() {
-						name := entry.Value.(Data.FileHashingData).Name
-						var hashSQLData = sqlite.SelectHashDataByName(dbPtr, name)
-						if hashSQLData.Name == ""  {
-							sqlite.InsertHashData(dbPtr, entry.Value.(Data.FileHashingData))
-							continue
-						}
-						sqlite.UpdateHashData(dbPtr, entry.Value.(Data.FileHashingData))
-					}
-					//close database
-					dbPtr.Close()
-					fmt.Println("Finished All Chores Successfully")
-				}
+			if Data.CreateFile(dbAbsolutePath) != nil {
+				break
 			}
+		}
+		var dbPtr = sqlite.OpenDatabase(dbAbsolutePath)
+		if dbPtr != nil{
+			sqlite.CreateTableHashedIfNotExists(dbPtr)
+			for entry := data.Front(); entry != nil; entry = entry.Next() {
+				name := entry.Value.(Data.FileHashingData).Name
+				var hashSQLData = sqlite.SelectHashDataByName(dbPtr, name)
+				if hashSQLData.Name == ""  {
+					sqlite.InsertHashData(dbPtr, entry.Value.(Data.FileHashingData))
+					continue
+				}
+				sqlite.UpdateHashData(dbPtr, entry.Value.(Data.FileHashingData))
+			}
+			//close database
+			dbPtr.Close()
+			fmt.Println("Finished All Chores Successfully")
 		}
 	}
 }
