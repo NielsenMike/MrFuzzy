@@ -36,7 +36,7 @@ func FindFilesByExtension(rootPath, ext string) []string {
 	filepath.WalkDir(rootPath, func(s string, d fs.DirEntry, e error) error {
 		if e != nil { return e }
 		if filepath.Ext(d.Name()) == ext {
-			files = append(files, rootPath + "/" +d.Name())
+			files = append(files, s)
 		}
 		return nil
 	})
