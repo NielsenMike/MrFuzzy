@@ -21,5 +21,8 @@ else
 done
 fi
 
+#Activate the Hashing Process on Server
+curl -X POST http://wiproh21-mnielsen.el.eee.intern:8080/writeDataIntoDB
+
 echo "$now : Script Finished " >> /home/mf_exporter/logs/logs.txt
 echo " " >> /home/mf_exporter/logs/logs.txt
