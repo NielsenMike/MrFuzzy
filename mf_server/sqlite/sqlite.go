@@ -8,7 +8,6 @@ import (
 	"mf_server/data"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 
@@ -43,6 +42,17 @@ func CreateTableHashedIfNotExists(database *sql.DB){
 	statement.Exec()
 }
 
+//createTable stats
+func CreateTableStatsIfNotExists(database *sql.DB){
+	createStatsTable := "CREATE TABLE IF NOT EXISTS stats (" +
+		"lastUpdate TEXT);"
+	statement, err := database.Prepare(createStatsTable)
+	if err != nil {
+		fmt.Println("Error creating table: \n "+err.Error())
+	}
+	statement.Exec()
+}
+
 func SelectHashDataByName(database *sql.DB, name string) Data.FileHashingDataSQL{
 	var hashedSQLData = Data.FileHashingDataSQL{}
 	err := database.QueryRow("SELECT * FROM hashed WHERE name = ?", name).Scan(&hashedSQLData.Name,
@@ -54,28 +64,58 @@ func SelectHashDataByName(database *sql.DB, name string) Data.FileHashingDataSQL
 	return hashedSQLData
 }
 
+func SelectDatabaseStatsUpdateTime(database *sql.DB) string{
+	var updateDate = ""
+	err := database.QueryRow("SELECT max(lastUpdate) from stats").Scan(&updateDate)
+	if err != nil && err.Error() != sql.ErrNoRows.Error() {
+		fmt.Println("Error in select hash data \n" + err.Error())
+	}
+	return updateDate
+}
+
 func SelectHashDataCountData(database *sql.DB, searchAttributes Data.FileHashingData) int{
 	var count = 0
-	countQuery := "SELECT COUNT(*) FROM hashed WHERE name like ?"
+	countQuery := "SELECT COUNT(*) FROM hashed WHERE " +
+		"name like ? " +
+		"AND (init_sha256hash LIKE ? " +
+		"OR cur_sha256hash LIKE ? )" +
+		"AND (init_ssdeephash LIKE ? " +
+		"OR cur_ssdeephash LIKE ? )"
 	countStatement, err := database.Prepare(countQuery)
 	if err != nil{
 		fmt.Println("Error select statements: \n" + err.Error())
 		return count
 	}
-	sqlRow := countStatement.QueryRow("%" + searchAttributes.Name + "%")
+	sqlRow := countStatement.QueryRow("%" + searchAttributes.Name + "%",
+		"%" + searchAttributes.SHA256Hash + "%",
+		"%" + searchAttributes.SHA256Hash + "%",
+		"%" + searchAttributes.SSDEEPHash + "%",
+		"%" + searchAttributes.SSDEEPHash + "%")
 	sqlRow.Scan(&count)
 	return count
 }
 
 func SelectHashDataBySearch(database *sql.DB, searchAttributes Data.FileHashingData, fromIndex, maxRows int,
 	outHashingData *[]Data.FileHashingDataSQL) {
-	selectQuery := "SELECT * FROM hashed WHERE name like ? LIMIT ?,?"
+	selectQuery := "SELECT * FROM hashed WHERE " +
+		"name like ? " +
+		"AND (init_sha256hash LIKE ?" +
+		"OR cur_sha256hash LIKE ? )" +
+		"AND (init_ssdeephash LIKE ? " +
+		"OR cur_ssdeephash LIKE ? )" +
+		" ORDER BY percentChange ASC, cur_date LIMIT ?,?"
 	selectStatement, err := database.Prepare(selectQuery)
 	if err != nil{
 		fmt.Println("Error select statements: \n" + err.Error())
 		return
 	}
-	sqlRows, err := selectStatement.Query("%" + searchAttributes.Name + "%", fromIndex, maxRows)
+	sqlRows, err := selectStatement.Query("%" + searchAttributes.Name + "%",
+		"%" + searchAttributes.SHA256Hash + "%",
+		"%" + searchAttributes.SHA256Hash + "%",
+		"%" + searchAttributes.SSDEEPHash + "%",
+		"%" + searchAttributes.SSDEEPHash + "%",
+		fromIndex,
+		maxRows)
 	if err != nil && err != sql.ErrNoRows {
 		fmt.Println("Error in select hash data \n" + err.Error())
 	}else{
@@ -92,8 +132,17 @@ func SelectHashDataBySearch(database *sql.DB, searchAttributes Data.FileHashingD
 	}
 }
 
+func InsertStatsData(database *sql.DB, currentDateTime string) {
+	insertData := "INSERT INTO stats (lastUpdate) values(?)"
+	statement, err := database.Prepare(insertData)
+	if err != nil {
+		fmt.Println("Error insert into database: \n" + err.Error())
+		return
+	}
+	statement.Exec(currentDateTime)
+}
 
-func InsertHashData(database *sql.DB, data Data.FileHashingData) {
+func InsertHashData(database *sql.DB, data Data.FileHashingData, initDate string) {
 	insertData := "INSERT INTO hashed (name, size, init_sha256Hash, init_ssdeepHash, init_date, cur_sha256hash, " +
 		"cur_ssdeephash, cur_date, percentchange) VALUES (?,?,?,?,?,?,?,?,?)"
 	statement, err := database.Prepare(insertData)
@@ -101,23 +150,17 @@ func InsertHashData(database *sql.DB, data Data.FileHashingData) {
 		fmt.Println("Error insert into database: \n" + err.Error())
 		return
 	}
-	//Date variable for init_date set
-	currentTime := time.Now()
-	var init_date = currentTime.Format("02-01-2006 15:04:05")
-	statement.Exec(data.Name, data.Size, data.SHA256Hash, data.SSDEEPHash, init_date, "null","null","null", 100)
+	statement.Exec(data.Name, data.Size, data.SHA256Hash, data.SSDEEPHash, initDate, "null","null","null", 0)
 }
 
 
 //writeTableCur This function writes to the table i.e. the database for the UPDATE SCENARIO
 //Filling the information with a prepared statement and a for loop/*
-func UpdateHashData(database *sql.DB, data Data.FileHashingData){
-	//Date variable for init_date set
-	currentTime := time.Now()
-	var curDate = currentTime.Format("02-01-2006 15:04:05")
-
+func UpdateHashData(database *sql.DB, data Data.FileHashingData, curDate string){
 	var sqlHashData = SelectHashDataByName(database, data.Name)
 	updateStatement := "UPDATE hashed SET cur_sha256hash = $1, cur_ssdeephash = $2, cur_date =  $3, percentChange = $4 WHERE name = $5"
-	var percentageChanged = Data.CalculateSSDEEPScore(sqlHashData.InitSsdeephash, data.SSDEEPHash, sqlHashData.PercentChange)
+	var percentageChanged = Data.CalculateMatchScore(sqlHashData.InitSsdeephash,
+		data.SSDEEPHash, sqlHashData.InitSha256hash, data.SHA256Hash, sqlHashData.PercentChange)
 	_, err := database.Exec(updateStatement, data.SHA256Hash, data.SSDEEPHash, curDate, percentageChanged, data.Name)
 	if err != nil {
 		fmt.Println("Error writing into database: \n" + err.Error())

@@ -53,6 +53,7 @@ type DatabaseInfo struct {
 	PreviousIndex int
 	FromIndex int
 	NextIndex int
+	LastUpdated string
 }
 
 func GetPreviousNextIndex(fromIndex, size, count int) (int,int){
@@ -70,9 +71,9 @@ func GetPreviousNextIndex(fromIndex, size, count int) (int,int){
 // set SHA256 & SSDEEP hash values
 func SetHashValues(fileHashingData *FileHashingData, data *[]byte){
 	// create fuzzy hash with ssdeep
-	ssdeepHash, fError := ssdeep.FuzzyBytes(*data)
-	if fError != nil {
-		ssdeepHash = "-" // the file is to small for ssdeep output error
+	ssdeepHash, err := ssdeep.FuzzyBytes(*data)
+	if err != nil {
+		ssdeepHash = "" // the file is to small for ssdeep output error
 	}
 	sha256hash := sha256.New()
 	sha256hash.Write(*data) // write bytes into sha object
@@ -81,9 +82,15 @@ func SetHashValues(fileHashingData *FileHashingData, data *[]byte){
 	fileHashingData.SHA256Hash = hex.EncodeToString(sha256hash.Sum(nil))
 }
 
-func CalculateSSDEEPScore(hash1 string, hash2 string, currentScore int) int {
+func CalculateMatchScore(ssdeep1, ssdeep2, sha1, sha2 string, currentScore int) int {
 	score := currentScore
-	score, _ = ssdeep.Distance(hash1, hash2)
+	if len(ssdeep1) > 0 && len(ssdeep2) > 0 {
+		score, _ = ssdeep.Distance(ssdeep1, ssdeep2)
+	} else {
+		if strings.Compare(sha1, sha2) == 0{
+			score = 100
+		}else { score = 0 }
+	}
 	return score
 }
 
@@ -96,6 +103,10 @@ func ParseSearchString(searchString string) FileHashingData{
 		switch pair[0] {
 		case "name":
 			fileHashingData.Name = pair[1]
+		case "sha":
+			fileHashingData.SHA256Hash = pair[1]
+		case "ssdeep":
+			fileHashingData.SSDEEPHash = pair[1]
 		}
 	}
 	return fileHashingData

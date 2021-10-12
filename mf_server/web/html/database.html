@@ -34,7 +34,7 @@
                 <h3 class="text-dark mb-4">Database Viewer</h3>
                     <div class="card shadow">
                         <div class="card-header py-3">
-                            <p class="text-primary m-0 font-weight-bold">{{.DatabaseName}}</p>
+                            <p class="text-primary m-0 font-weight-bold">{{.DatabaseName}} - Last updated {{.LastUpdated}}</p>
                         </div>
                         <div class="col-md-4 offset-md-4 mt-5 border border-success pt-3">
                             <form method="post" action="/database?db={{.DatabaseName}}">
@@ -66,7 +66,7 @@
                     </div>
                     <div class="card-body">
                         <div class="table-responsive table mt-2" id="dataTable-1" role="grid" aria-describedby="dataTable_info">
-                            <table class="styled-table" id="dataTable">
+                            <table class="styled-table table-hover" id="dataTable">
                                 <thead>
                                 <tr>
                                     <th class="normal-value">name</th>
@@ -77,12 +77,17 @@
                                     <th class="normal-value">current SHA256</th>
                                     <th class="normal-value">current SSDEEP</th>
                                     <th class="normal-value">current date</th>
-                                    <th class="normal-value">changed %</th>
+                                    <th class="normal-value">matches %</th>
                                 </tr>
                                 </thead>
                                 <tbody>
+                                    {{$lastUpdate:=.LastUpdated}}
                                     {{range .Entries}}
-                                    <tr>
+                                    <tr
+                                            {{if (ne .PercentChange 100) }} class="table-danger"
+                                            {{else if (ne .CurDate $lastUpdate) }} class="table-warning"
+                                            {{else if (eq .PercentChange 100) }} class="table-success" {{end}}
+                                    >
                                         <td class="name-value">{{.Name}}</td>
                                         <td class="normal-value">{{.Size}}</td>
                                         <td class="hash-value">{{.InitSha256hash}}</td>

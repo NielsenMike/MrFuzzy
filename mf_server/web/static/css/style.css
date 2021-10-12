@@ -1,7 +1,7 @@
 .styled-table {
     border-collapse: collapse;
     font-size: 0.7em;
-    min-width: 400px;
+    width: 100%;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
 }
 
@@ -39,7 +39,7 @@
 
 .date-value{
     word-break: break-all;
-    min-width: 130px;
+    min-width: 145px;
     white-space: pre-wrap;
 }
 
@@ -50,6 +50,7 @@
 
 .hash-value{
     word-break: break-all;
+    width: 50px;
 }
 
 .normal-value{

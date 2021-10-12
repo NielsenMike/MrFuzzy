@@ -49,10 +49,17 @@ func DatabaseHandler(w http.ResponseWriter, r *http.Request){
 		if err != nil {
 			fromIndex = 0
 		}
+		lastUpdated := sqlite.SelectDatabaseStatsUpdateTime(dbPtr)
 		count := sqlite.SelectHashDataCountData(dbPtr, searchDataQuery)
 		previousIndex, nextIndex := Data.GetPreviousNextIndex(fromIndex, databaseViewerEntriesNumber, count)
-		data = Data.DatabaseInfo{DatabaseName: dbAbsolutePathGet, Entries: new([]Data.FileHashingDataSQL),
-			Count: count, PreviousIndex: previousIndex, FromIndex: fromIndex, NextIndex: nextIndex}
+		data = Data.DatabaseInfo{DatabaseName: dbAbsolutePathGet,
+			Entries: new([]Data.FileHashingDataSQL),
+			Count: count,
+			PreviousIndex: previousIndex,
+			FromIndex: fromIndex,
+			NextIndex: nextIndex,
+			LastUpdated: lastUpdated,
+		}
 		sqlite.SelectHashDataBySearch(dbPtr, searchDataQuery, fromIndex, databaseViewerEntriesNumber, data.Entries)
 	}
 	tmpl.Execute(w, data)
@@ -62,6 +69,9 @@ func DatabaseHandler(w http.ResponseWriter, r *http.Request){
 
 func WriteDataIntoDBHandler(w http.ResponseWriter, r *http.Request) {
 	// open tar files
+	//Date variable for init_date set
+	currentTime := time.Now()
+	var currentDateTime = currentTime.Format("02-01-2006 15:04:05")
 	for _, tarAbsolutePath := range Data.FindFilesByExtension(*ArchiveDirPtr, ".tar") {
 		fmt.Printf("Reading Tar-file: %s \n", tarAbsolutePath)
 		data := list.New()
@@ -71,22 +81,27 @@ func WriteDataIntoDBHandler(w http.ResponseWriter, r *http.Request) {
 			if !Data.FileExists(dbAbsolutePath) {
 				Data.CreateFile(dbAbsolutePath)
 			}
-			err = fillDatabaseChanges(dbAbsolutePath, data)
+			err = fillDatabaseChanges(dbAbsolutePath, data, currentDateTime)
 			if err == nil{
 				fmt.Printf("Filled data to database: %s \n", dbAbsolutePath)
-				var currentTime = time.Now()
-				err = createBackupFromTar(tarAbsolutePath, currentTime)
+				err = updateDatabaseStats(dbAbsolutePath, currentDateTime)
 				if err == nil{
-					fmt.Printf("Created backup file: %s \n", tarAbsolutePath)
-				}else{ fmt.Println("Failed to create backup " + err.Error()) }
+					fmt.Printf("Updated stats to database: %s \n", dbAbsolutePath)
+					err = createBackupFromTar(tarAbsolutePath)
+					if err == nil{
+						fmt.Printf("Created backup file: %s \n", tarAbsolutePath)
+					}else{ fmt.Println("Failed to create backup " + err.Error()) }
+				}else{
+					fmt.Printf("Failed to update stats for database: %s \n", dbAbsolutePath)
+				}
 			} else { fmt.Println("Failed to fill data to database " + err.Error()) }
 		} else{ fmt.Println("Failed read data from tar " + err.Error()) }
 	}
 }
 
-func createBackupFromTar(absolutePath string, currentDate time.Time) error{
+func createBackupFromTar(absolutePath string) error{
 	// copy tar create backup
-	backupAbsolutePath := Data.ReplaceExt(absolutePath, currentDate.Format("2006-01-02T15:04:05-0700")+".tar.bak")
+	backupAbsolutePath := Data.ReplaceExt(absolutePath, strconv.FormatInt(time.Now().Unix(), 10) + ".tar.bak")
 	source, err := os.Open(absolutePath)
 	if err != nil {
 		return errors.New("Failed to open file.")
@@ -113,7 +128,7 @@ func readDataFromTar(absolutePath string, dataOut *list.List) error{
 	return nil
 }
 
-func fillDatabaseChanges(absolutePath string, inData* list.List) error{
+func fillDatabaseChanges(absolutePath string, inData* list.List, currentDateTime string) error{
 	var dbPtr = sqlite.OpenDatabase(absolutePath)
 	if dbPtr != nil {
 		sqlite.CreateTableHashedIfNotExists(dbPtr)
@@ -121,15 +136,26 @@ func fillDatabaseChanges(absolutePath string, inData* list.List) error{
 			name := entry.Value.(Data.FileHashingData).Name
 			var hashSQLData = sqlite.SelectHashDataByName(dbPtr, name)
 			if hashSQLData.Name == "" {
-				sqlite.InsertHashData(dbPtr, entry.Value.(Data.FileHashingData))
+				sqlite.InsertHashData(dbPtr, entry.Value.(Data.FileHashingData), currentDateTime)
 				continue
 			}
-			sqlite.UpdateHashData(dbPtr, entry.Value.(Data.FileHashingData))
+			sqlite.UpdateHashData(dbPtr, entry.Value.(Data.FileHashingData), currentDateTime)
 		}
 		dbPtr.Close()
 		return nil
 	}
 	return errors.New("failed to set data into database.")
+}
+
+func updateDatabaseStats(absolutePath, currentDateTime string) error{
+	var dbPtr = sqlite.OpenDatabase(absolutePath)
+	if dbPtr != nil {
+		sqlite.CreateTableStatsIfNotExists(dbPtr)
+		sqlite.InsertStatsData(dbPtr, currentDateTime)
+		dbPtr.Close()
+		return nil
+	}
+	return errors.New("failed to set stats into database.")
 }
 
 
