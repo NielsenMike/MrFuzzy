@@ -49,7 +49,8 @@ func DatabaseHandler(w http.ResponseWriter, r *http.Request){
 		if err != nil {
 			fromIndex = 0
 		}
-		lastUpdated := sqlite.SelectDatabaseStatsUpdateTime(dbPtr)
+		initializedDate := sqlite.SelectDatabaseStatsInitTime(dbPtr)
+		lastUpdatedDate := sqlite.SelectDatabaseStatsUpdateTime(dbPtr)
 		count := sqlite.SelectHashDataCountData(dbPtr, searchDataQuery)
 		previousIndex, nextIndex := Data.GetPreviousNextIndex(fromIndex, databaseViewerEntriesNumber, count)
 		data = Data.DatabaseInfo{DatabaseName: dbAbsolutePathGet,
@@ -58,7 +59,8 @@ func DatabaseHandler(w http.ResponseWriter, r *http.Request){
 			PreviousIndex: previousIndex,
 			FromIndex: fromIndex,
 			NextIndex: nextIndex,
-			LastUpdated: lastUpdated,
+			InitializedDate: initializedDate,
+			LastUpdateDate: lastUpdatedDate,
 		}
 		sqlite.SelectHashDataBySearch(dbPtr, searchDataQuery, fromIndex, databaseViewerEntriesNumber, data.Entries)
 	}

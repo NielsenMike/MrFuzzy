@@ -53,7 +53,8 @@ type DatabaseInfo struct {
 	PreviousIndex int
 	FromIndex int
 	NextIndex int
-	LastUpdated string
+	InitializedDate string
+	LastUpdateDate string
 }
 
 func GetPreviousNextIndex(fromIndex, size, count int) (int,int){

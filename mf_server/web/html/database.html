@@ -34,7 +34,8 @@
                 <h3 class="text-dark mb-4">Database Viewer</h3>
                     <div class="card shadow">
                         <div class="card-header py-3">
-                            <p class="text-primary m-0 font-weight-bold">{{.DatabaseName}} - Last updated {{.LastUpdated}}</p>
+                            <p class="text-primary m-0 font-weight-bold">{{.DatabaseName}}</p>
+                            <p class="font-weight-bold ">Initialized at {{.InitializedDate}} last updated {{.LastUpdateDate}}</p>
                         </div>
                         <div class="col-md-4 offset-md-4 mt-5 border border-success pt-3">
                             <form method="post" action="/database?db={{.DatabaseName}}">
@@ -81,22 +82,33 @@
                                 </tr>
                                 </thead>
                                 <tbody>
-                                    {{$lastUpdate:=.LastUpdated}}
+                                    {{$initializedDate:=.InitializedDate}}
+                                    {{$lastUpdateDate:=.LastUpdateDate}}
                                     {{range .Entries}}
                                     <tr
                                             {{if (ne .PercentChange 100) }} class="table-danger"
-                                            {{else if (ne .CurDate $lastUpdate) }} class="table-warning"
+                                            {{else if (ne .InitDate $initializedDate) }} class="table-warning"
+                                            {{else if (ne .CurDate $lastUpdateDate) }} class="table-warning"
                                             {{else if (eq .PercentChange 100) }} class="table-success" {{end}}
                                     >
-                                        <td class="name-value">{{.Name}}</td>
-                                        <td class="normal-value">{{.Size}}</td>
-                                        <td class="hash-value">{{.InitSha256hash}}</td>
-                                        <td class="hash-value">{{.InitSsdeephash}}</td>
-                                        <td class="date-value">{{.InitDate}}</td>
-                                        <td class="hash-value">{{.CurSha256hash}}</td>
-                                        <td class="hash-value">{{.CurSsdeephash}}</td>
-                                        <td class="date-value">{{.CurDate}}</td>
-                                        <td class="normal-value">{{.PercentChange}}</td>
+                                        <td class="name-value"><p class="text-secondary">{{.Name}}</p></td>
+                                        <td class="normal-value"><p class="text-secondary">{{.Size}}</p></td>
+                                        <td class="hash-value"><p class="text-secondary">{{.InitSha256hash}}</p></td>
+                                        <td class="hash-value"><p class="text-secondary">{{.InitSsdeephash}}</p></td>
+                                        <td class="date-value">{{if (ne .InitDate $initializedDate) }}
+                                            <p class="text-danger">{{.InitDate}}</p> {{else}}
+                                            <p class="text-success">{{.InitDate}}</p> {{end}}
+                                        </td>
+                                        <td class="hash-value"><p class="text-secondary">{{.CurSha256hash}}</p></td>
+                                        <td class="hash-value"><p class="text-secondary">{{.CurSsdeephash}}</p></td>
+                                        <td class="date-value">{{if (ne .CurDate $lastUpdateDate) }}
+                                            <p class="text-danger">{{.CurDate}}</p> {{else}}
+                                            <p class="text-success">{{.CurDate}}</p> {{end}}
+                                        </td>
+                                        <td class="normal-value ">{{if (ne .PercentChange 100) }}
+                                            <p class="text-danger">{{.PercentChange}}</p> {{else}}
+                                            <p class="text-success">{{.PercentChange}}</p> {{end}}
+                                        </td>
                                     </tr>
                                 {{end}}
                                 </tbody>

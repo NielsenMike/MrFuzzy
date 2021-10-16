@@ -73,6 +73,15 @@ func SelectDatabaseStatsUpdateTime(database *sql.DB) string{
 	return updateDate
 }
 
+func SelectDatabaseStatsInitTime(database *sql.DB) string{
+	var initDate = ""
+	err := database.QueryRow("SELECT MIN(lastUpdate) from stats").Scan(&initDate)
+	if err != nil && err.Error() != sql.ErrNoRows.Error() {
+		fmt.Println("Error in select hash data \n" + err.Error())
+	}
+	return initDate
+}
+
 func SelectHashDataCountData(database *sql.DB, searchAttributes Data.FileHashingData) int{
 	var count = 0
 	countQuery := "SELECT COUNT(*) FROM hashed WHERE " +
@@ -103,7 +112,7 @@ func SelectHashDataBySearch(database *sql.DB, searchAttributes Data.FileHashingD
 		"OR cur_sha256hash LIKE ? )" +
 		"AND (init_ssdeephash LIKE ? " +
 		"OR cur_ssdeephash LIKE ? )" +
-		" ORDER BY percentChange ASC, cur_date LIMIT ?,?"
+		" ORDER BY percentChange ASC, cur_date ASC, init_date DESC LIMIT ?,?"
 	selectStatement, err := database.Prepare(selectQuery)
 	if err != nil{
 		fmt.Println("Error select statements: \n" + err.Error())
