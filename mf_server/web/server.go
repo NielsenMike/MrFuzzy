@@ -70,8 +70,6 @@ func DatabaseHandler(w http.ResponseWriter, r *http.Request){
 }
 
 func WriteDataIntoDBHandler(w http.ResponseWriter, r *http.Request) {
-	// open tar files
-	//Date variable for init_date set
 	currentTime := time.Now()
 	var currentDateTime = currentTime.Format("02-01-2006 15:04:05")
 	for _, tarAbsolutePath := range Data.FindFilesByExtension(*ArchiveDirPtr, ".tar") {
@@ -83,7 +81,7 @@ func WriteDataIntoDBHandler(w http.ResponseWriter, r *http.Request) {
 			if !Data.FileExists(dbAbsolutePath) {
 				Data.CreateFile(dbAbsolutePath)
 			}
-			err = fillDatabaseChanges(dbAbsolutePath, data, currentDateTime)
+			err = updateDatabaseChanges(dbAbsolutePath, data, currentDateTime)
 			if err == nil{
 				fmt.Printf("Filled data to database: %s \n", dbAbsolutePath)
 				err = updateDatabaseStats(dbAbsolutePath, currentDateTime)
@@ -130,7 +128,7 @@ func readDataFromTar(absolutePath string, dataOut *list.List) error{
 	return nil
 }
 
-func fillDatabaseChanges(absolutePath string, inData* list.List, currentDateTime string) error{
+func updateDatabaseChanges(absolutePath string, inData* list.List, currentDateTime string) error{
 	var dbPtr = sqlite.OpenDatabase(absolutePath)
 	if dbPtr != nil {
 		sqlite.CreateTableHashedIfNotExists(dbPtr)

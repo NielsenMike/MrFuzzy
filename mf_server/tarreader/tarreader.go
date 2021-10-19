@@ -49,7 +49,6 @@ func Read(tr *tar.Reader, dataOut *list.List) error {
 }
 
 func readFiles(header *tar.Header, data []byte) Data.FileHashingData {
-	// if it's a file create it
 	fileData := Data.FileHashingData{}
 	// check if it is a file
 	if header.Typeflag == tar.TypeReg {
