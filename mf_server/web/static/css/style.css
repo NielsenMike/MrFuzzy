@@ -40,7 +40,6 @@
 .date-value{
     word-break: break-all;
     min-width: 145px;
-    white-space: pre-wrap;
 }
 
 .name-value{

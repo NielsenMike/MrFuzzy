@@ -35,7 +35,8 @@
                     <div class="card shadow">
                         <div class="card-header py-3">
                             <p class="text-primary m-0 font-weight-bold">{{.DatabaseName}}</p>
-                            <p class="font-weight-bold ">Initialized at {{.InitializedDate}} last updated {{.LastUpdateDate}}</p>
+                            <p class="font-weight-bold "><span class="bg-primary text-white"> Initialized at {{.InitializedDate}} </span>
+                                <span class="bg-secondary text-white"> last updated {{.LastUpdateDate}} </span></p>
                         </div>
                         <div class="col-md-4 offset-md-4 mt-5 border border-success pt-3">
                             <form method="post" action="/database?db={{.DatabaseName}}">
@@ -99,8 +100,12 @@
                                             <p class="text-danger">{{.InitDate}}</p> {{else}}
                                             <p class="text-success">{{.InitDate}}</p> {{end}}
                                         </td>
-                                        <td class="hash-value"><p class="text-secondary">{{.CurSha256hash}}</p></td>
-                                        <td class="hash-value"><p class="text-secondary">{{.CurSsdeephash}}</p></td>
+                                        <td class="hash-value">{{if (ne .CurSha256hash .InitSha256hash) }}
+                                            <p class="text-danger">{{.CurSha256hash}}</p></td>{{else}}
+                                            <p class="text-success">{{.CurSha256hash}}</p> {{end}}
+                                        <td class="hash-value">{{if (ne .CurSsdeephash .InitSsdeephash) }}
+                                            <p class="text-danger">{{.CurSsdeephash}}</p></td>{{else}}
+                                            <p class="text-success">{{.CurSsdeephash}}</p> {{end}}
                                         <td class="date-value">{{if (ne .CurDate $lastUpdateDate) }}
                                             <p class="text-danger">{{.CurDate}}</p> {{else}}
                                             <p class="text-success">{{.CurDate}}</p> {{end}}
