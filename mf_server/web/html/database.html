@@ -88,6 +88,8 @@
                                     {{range .Entries}}
                                     <tr
                                             {{if (ne .PercentChange 100) }} class="table-danger"
+                                            {{else if (ne .CurSha256hash .InitSha256hash) }} class="table-danger"
+                                            {{else if (ne .CurSsdeephash .InitSsdeephash) }} class="table-danger"
                                             {{else if (ne .InitDate $initializedDate) }} class="table-warning"
                                             {{else if (ne .CurDate $lastUpdateDate) }} class="table-warning"
                                             {{else if (eq .PercentChange 100) }} class="table-success" {{end}}
